@@ -836,8 +836,18 @@ instance Pretty Exp where
         pprInit (Just d, ini)  = ppr d <+> text "=" <+/> ppr ini
 
     pprPrec _ (StmExpr blockItems loc) =
-        pprLoc loc $ parens $
-        ppr blockItems
+        -- Here comes the ugly hack to replace statement expressions with C++11
+        -- lambda expressions that are defined and called in place.
+        let addReturnToBlockStm (BlockStm (Exp maybeExpr srcLoc)) =
+                BlockStm (Return maybeExpr srcLoc)
+            addReturnToLastStm stmts =
+                if null stmts then
+                    []
+                else
+                    init blockItems <> [addReturnToBlockStm $ last blockItems]
+        in pprLoc loc $ text "[&]"
+                     <> ppr (addReturnToLastStm blockItems)
+                     <> text "()"
 
     pprPrec _ (BuiltinVaArg e ty loc) =
         pprLoc loc $
