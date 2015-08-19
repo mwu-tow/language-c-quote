@@ -503,9 +503,10 @@ primary_expression :
 
   -- CUDA -- C++11 lambda-expression subset
   | capture_list compound_statement
-    { let Block items _ = $2
-      in
-        Lambda $1 items ($1 `srcspan` $2)
+    {% do { assertCudaEnabled ($1 <--> $2) "To use lambda-expressions, enable support for CUDA"
+          ; let Block items _ = $2
+          ; return $ Lambda $1 items ($1 `srcspan` $2)
+          }
     }
 
 capture_list :: { CaptureList }
@@ -3928,6 +3929,12 @@ assertObjCEnabled loc errMsg = do
     objc_enabled <- useObjCExts
     unless objc_enabled $
      throw $ ParserException loc $ text errMsg
+
+assertCudaEnabled :: Loc -> String -> P ()
+assertCudaEnabled loc errMsg = do
+ cuda_enabled <- useCUDAExts
+ unless cuda_enabled $
+  throw $ ParserException loc $ text errMsg
 
 mkCommentStm :: L T.Token -> Stm -> Stm
 mkCommentStm tok stm = Comment (getCOMMENT tok) stm (srclocOf tok)
