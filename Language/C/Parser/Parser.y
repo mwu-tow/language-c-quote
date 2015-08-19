@@ -501,6 +501,23 @@ primary_expression :
   | objc_message_expression { $1 }
   | objc_at_expression      { $1 }
 
+  -- CUDA -- C++11 lambda-expression subset
+  | capture_list compound_statement
+    { let Block items _ = $2
+      in
+        Lambda $1 items ($1 `srcspan` $2)
+    }
+
+capture_list :: { CaptureList }
+capture_list :
+    '[' capture_items ']' { CaptureList $2 ($1 `srcspan` $3)}
+
+capture_items :: { [CaptureListEntry] }
+capture_items :
+      '&' { [DefaultByReference] }
+    | '=' { [DefaultByValue] }
+    | {- empty -}  { [] }
+
 postfix_expression :: { Exp }
 postfix_expression :
     primary_expression

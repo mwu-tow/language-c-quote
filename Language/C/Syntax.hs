@@ -356,6 +356,17 @@ data Exp = Var Id !SrcLoc
          | ObjCEncode Type !SrcLoc
          | ObjCProtocol Id !SrcLoc
          | ObjCSelector String !SrcLoc
+
+         -- CUDA: C++11 lambda-expression
+         | Lambda CaptureList [BlockItem] !SrcLoc
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+-- Capture list of C++11 lambda-expression
+data CaptureList = CaptureList [CaptureListEntry] !SrcLoc
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+data CaptureListEntry = DefaultByReference
+                      | DefaultByValue
     deriving (Eq, Ord, Show, Data, Typeable)
 
 data BinOp = Add
@@ -788,8 +799,12 @@ instance Located Exp where
     locOf (ObjCEncode _ loc)      = locOf loc
     locOf (ObjCProtocol _ loc)    = locOf loc
     locOf (ObjCSelector _ loc)    = locOf loc
+    locOf (Lambda _ _ loc)      = locOf loc
     locOf (AntiExp _ loc)         = locOf loc
     locOf (AntiArgs _ loc)        = locOf loc
+
+instance Located CaptureList where
+    locOf (CaptureList _ loc) = locOf loc
 
 instance Located BlockType where
     locOf (BlockVoid loc)    = locOf loc
