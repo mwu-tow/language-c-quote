@@ -361,17 +361,6 @@ data Exp = Var Id !SrcLoc
          | Lambda LambdaIntroducer (Maybe LambdaDeclarator) [BlockItem] !SrcLoc
     deriving (Eq, Ord, Show, Data, Typeable)
 
--- Capture list of C++11 lambda-expression
-data LambdaIntroducer = LambdaIntroducer [CaptureListEntry] !SrcLoc
-    deriving (Eq, Ord, Show, Data, Typeable)
-
-data LambdaDeclarator = LambdaDeclarator Params Bool (Maybe Type) !SrcLoc
-    deriving (Eq, Ord, Show, Data, Typeable)
-
-data CaptureListEntry = DefaultByReference
-                      | DefaultByValue
-    deriving (Eq, Ord, Show, Data, Typeable)
-
 data BinOp = Add
            | Sub
            | Mul
@@ -523,6 +512,16 @@ data ObjCArg = ObjCArg (Maybe Id) (Maybe Exp) !SrcLoc
  - CUDA
  -
  ------------------------------------------------------------------------------}
+
+data LambdaIntroducer = LambdaIntroducer [CaptureListEntry] !SrcLoc
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+data LambdaDeclarator = LambdaDeclarator Params Bool (Maybe Type) !SrcLoc
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+data CaptureListEntry = DefaultByReference
+                      | DefaultByValue
+    deriving (Eq, Ord, Show, Data, Typeable)
 
 data ExeConfig = ExeConfig
     {  exeGridDim    :: Exp
