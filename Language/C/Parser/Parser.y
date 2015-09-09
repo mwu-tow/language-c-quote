@@ -768,6 +768,9 @@ primary_expression_nlt :
   | objc_message_expression { $1 }
   | objc_at_expression      { $1 }
 
+  -- CUDA -- C++11 lambda-expression subset
+  | cuda_lambda_expression  { $1 }
+
 postfix_expression_nlt :: { Exp }
 postfix_expression_nlt :
     primary_expression_nlt
