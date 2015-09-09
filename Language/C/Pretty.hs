@@ -932,18 +932,24 @@ instance Pretty Exp where
         srcloc loc <>
         text "@selector" <> parens (text sel)
 
-    pprPrec _ (Lambda captureList args blockItems loc) =
+    pprPrec _ (Lambda captureList decl blockItems loc) =
         srcloc loc <>
         ppr captureList <>
-        (if isJust args then parens.ppr else ppr) args <>
+        ppr decl <>
         ppr blockItems
 
     pprPrec _ (AntiArgs v _)  = pprAnti "args"  v
 
     pprPrec _ (AntiExp v _)   = pprAnti "var"  v
 
-instance Pretty CaptureList where
-    pprPrec _ (CaptureList items loc) = pprLoc loc $ brackets $ commasep (map ppr items)
+instance Pretty LambdaDeclarator where
+    pprPrec _ (LambdaDeclarator params isMutable returnType loc) =
+        parens (ppr params) <>
+        (if isMutable then text "mutable" else empty) <>
+        (if isJust returnType then text "->" <> ppr returnType else empty)
+
+instance Pretty LambdaIntroducer where
+    pprPrec _ (LambdaIntroducer items loc) = pprLoc loc $ brackets $ commasep (map ppr items)
 
 instance Pretty CaptureListEntry where
     pprPrec _ DefaultByValue = char '='

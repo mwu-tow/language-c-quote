@@ -358,11 +358,14 @@ data Exp = Var Id !SrcLoc
          | ObjCSelector String !SrcLoc
 
          -- CUDA: C++11 lambda-expression
-         | Lambda CaptureList (Maybe Params) [BlockItem] !SrcLoc
+         | Lambda LambdaIntroducer (Maybe LambdaDeclarator) [BlockItem] !SrcLoc
     deriving (Eq, Ord, Show, Data, Typeable)
 
 -- Capture list of C++11 lambda-expression
-data CaptureList = CaptureList [CaptureListEntry] !SrcLoc
+data LambdaIntroducer = LambdaIntroducer [CaptureListEntry] !SrcLoc
+    deriving (Eq, Ord, Show, Data, Typeable)
+
+data LambdaDeclarator = LambdaDeclarator Params Bool (Maybe Type) !SrcLoc
     deriving (Eq, Ord, Show, Data, Typeable)
 
 data CaptureListEntry = DefaultByReference
@@ -803,8 +806,11 @@ instance Located Exp where
     locOf (AntiExp _ loc)         = locOf loc
     locOf (AntiArgs _ loc)        = locOf loc
 
-instance Located CaptureList where
-    locOf (CaptureList _ loc) = locOf loc
+instance Located LambdaIntroducer where
+    locOf (LambdaIntroducer _ loc) = locOf loc
+
+instance Located LambdaDeclarator where
+    locOf (LambdaDeclarator _ _ _ loc) = locOf loc
 
 instance Located BlockType where
     locOf (BlockVoid loc)    = locOf loc

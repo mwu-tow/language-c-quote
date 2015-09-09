@@ -233,6 +233,8 @@ c :-
  --
  -- CUDA
  --
+ "mutable" { token TCUDAmutable }
+
  "<<<" / { ifExtension cudaExts }
          { token TCUDA3lt }
 

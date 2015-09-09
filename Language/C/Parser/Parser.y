@@ -253,6 +253,7 @@ import qualified Language.C.Syntax as C
  --
  -- CUDA
  --
+ 'mutable'       { L _ T.TCUDAmutable }
  '<<<'           { L _ T.TCUDA3lt }
  '>>>'           { L _ T.TCUDA3gt }
  '__device__'    { L _ T.TCUDAdevice }
@@ -3223,22 +3224,37 @@ objc_compatibility_alias :
  -
  ------------------------------------------------------------------------------}
 cuda_lambda_expression :: { Exp }
-cuda_lambda_expression : cuda_lambda_capture_list cuda_lambda_param_list compound_statement
+cuda_lambda_expression : cuda_lambda_introducer cuda_lambda_declarator compound_statement
     {% do { assertCudaEnabled ($1 <--> $3) "To use lambda-expressions, enable support for CUDA"
           ; let Block items _ = $3
           ; return $ Lambda $1 $2 items ($1 `srcspan` $3)
           }
     }
 
-cuda_lambda_param_list :: { Maybe Params }
-cuda_lambda_param_list :
-      '(' parameter_type_list ')' { Just $2 }
-    | '(' ')' { Just $ Params [] False ($1 `srcspan` $2) }
+cuda_lambda_declarator :: { Maybe LambdaDeclarator }
+cuda_lambda_declarator :
+      cuda_lambda_param_list cuda_lambda_mutable cuda_lambda_return_type { Just $ LambdaDeclarator $1 $2 $3 ($1 `srcspan` $3) }
     | {- empty -} { Nothing }
 
-cuda_lambda_capture_list :: { CaptureList }
-cuda_lambda_capture_list :
-    '[' cuda_lambda_capture_items ']' { CaptureList $2 ($1 `srcspan` $3)}
+cuda_lambda_param_list :: { Params }
+cuda_lambda_param_list :
+      '(' ')' { Params [] False ($1 `srcspan` $2) }
+    | '(' parameter_type_list ')' { $2 }
+
+cuda_lambda_mutable :: { Bool }
+cuda_lambda_mutable :
+      'mutable'   { True  }
+    | {- Empty -} { False }
+
+cuda_lambda_return_type :: { Maybe Type }
+cuda_lambda_return_type :
+    {- Empty -} { Nothing }
+    -- FIXME: There should be possibility to explicitly state returned type.
+    -- | '->' type_name { Just ($2::Type) }
+
+cuda_lambda_introducer :: { LambdaIntroducer }
+cuda_lambda_introducer :
+    '[' cuda_lambda_capture_items ']' { LambdaIntroducer $2 ($1 `srcspan` $3)}
 
 cuda_lambda_capture_items :: { [CaptureListEntry] }
 cuda_lambda_capture_items :
