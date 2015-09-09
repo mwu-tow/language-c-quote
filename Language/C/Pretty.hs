@@ -16,6 +16,8 @@ module Language.C.Pretty where
 import Data.Char (isAlphaNum,
                   isLower)
 import Data.Loc
+import Data.Maybe (isJust)
+
 import Language.C.Syntax
 import Text.PrettyPrint.Mainland
 
@@ -930,9 +932,10 @@ instance Pretty Exp where
         srcloc loc <>
         text "@selector" <> parens (text sel)
 
-    pprPrec _ (Lambda captureList blockItems loc) =
+    pprPrec _ (Lambda captureList args blockItems loc) =
         srcloc loc <>
         ppr captureList <>
+        (if isJust args then parens.ppr else ppr) args <>
         ppr blockItems
 
     pprPrec _ (AntiArgs v _)  = pprAnti "args"  v

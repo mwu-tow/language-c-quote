@@ -358,7 +358,7 @@ data Exp = Var Id !SrcLoc
          | ObjCSelector String !SrcLoc
 
          -- CUDA: C++11 lambda-expression
-         | Lambda CaptureList [BlockItem] !SrcLoc
+         | Lambda CaptureList (Maybe Params) [BlockItem] !SrcLoc
     deriving (Eq, Ord, Show, Data, Typeable)
 
 -- Capture list of C++11 lambda-expression
@@ -799,7 +799,7 @@ instance Located Exp where
     locOf (ObjCEncode _ loc)      = locOf loc
     locOf (ObjCProtocol _ loc)    = locOf loc
     locOf (ObjCSelector _ loc)    = locOf loc
-    locOf (Lambda _ _ loc)      = locOf loc
+    locOf (Lambda _ _ _ loc)      = locOf loc
     locOf (AntiExp _ loc)         = locOf loc
     locOf (AntiArgs _ loc)        = locOf loc
 

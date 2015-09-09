@@ -502,22 +502,8 @@ primary_expression :
   | objc_at_expression      { $1 }
 
   -- CUDA -- C++11 lambda-expression subset
-  | capture_list compound_statement
-    {% do { assertCudaEnabled ($1 <--> $2) "To use lambda-expressions, enable support for CUDA"
-          ; let Block items _ = $2
-          ; return $ Lambda $1 items ($1 `srcspan` $2)
-          }
-    }
+  | cuda_lambda_expression  { $1 }
 
-capture_list :: { CaptureList }
-capture_list :
-    '[' capture_items ']' { CaptureList $2 ($1 `srcspan` $3)}
-
-capture_items :: { [CaptureListEntry] }
-capture_items :
-      '&' { [DefaultByReference] }
-    | '=' { [DefaultByValue] }
-    | {- empty -}  { [] }
 
 postfix_expression :: { Exp }
 postfix_expression :
@@ -3236,6 +3222,30 @@ objc_compatibility_alias :
  - CUDA
  -
  ------------------------------------------------------------------------------}
+cuda_lambda_expression :: { Exp }
+cuda_lambda_expression : cuda_lambda_capture_list cuda_lambda_param_list compound_statement
+    {% do { assertCudaEnabled ($1 <--> $3) "To use lambda-expressions, enable support for CUDA"
+          ; let Block items _ = $3
+          ; return $ Lambda $1 $2 items ($1 `srcspan` $3)
+          }
+    }
+
+cuda_lambda_param_list :: { Maybe Params }
+cuda_lambda_param_list :
+      '(' parameter_type_list ')' { Just $2 }
+    | '(' ')' { Just $ Params [] False ($1 `srcspan` $2) }
+    | {- empty -} { Nothing }
+
+cuda_lambda_capture_list :: { CaptureList }
+cuda_lambda_capture_list :
+    '[' cuda_lambda_capture_items ']' { CaptureList $2 ($1 `srcspan` $3)}
+
+cuda_lambda_capture_items :: { [CaptureListEntry] }
+cuda_lambda_capture_items :
+      '&' { [DefaultByReference] }
+    | '=' { [DefaultByValue] }
+    | {- empty -}  { [] }
+
 
 execution_configuration :: { ExeConfig }
 execution_configuration :
