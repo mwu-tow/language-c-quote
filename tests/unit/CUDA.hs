@@ -17,6 +17,7 @@ mkIntroducer mode = (LambdaIntroducer mode noLoc)
 
 emptyLambda = lambdaByCapture []
 lambdaByCapture captureMode = Lambda (mkIntroducer captureMode) Nothing [] noLoc
+lambdaByCaptureBody captureMode statements = Lambda (mkIntroducer captureMode) Nothing statements noLoc
 lambdaByCaptureParams captureMode params = Lambda (mkIntroducer captureMode) (Just $ mkDeclarator params False) [] noLoc
 
 lambdaByParams params = Lambda (mkIntroducer []) (Just $ mkDeclarator params False) [] noLoc
@@ -24,7 +25,7 @@ mutableLambdaByParams params = Lambda (mkIntroducer []) (Just $ mkDeclarator par
 
 cudaTests :: Test
 cudaTests = testGroup "CUDA"
-    $ map (testCase "CUDA lambda-expressions") lambdas
+    $ map (testCase "lambda-expressions parsing") lambdas
   where
     lambdas :: [Assertion]
     lambdas = [ [cexp|[=] {}|] @?= lambdaByCapture [DefaultByValue]
@@ -37,7 +38,12 @@ cudaTests = testGroup "CUDA"
               , [cexp|[] ($param:param_int_i) {}|] @?= lambdaByParams [param_int_i] 
               , [cexp|[] (int i) mutable {}|] @?= mutableLambdaByParams [param_int_i]  
               , [cexp|[&] (int i) {}|] @?= lambdaByCaptureParams [DefaultByReference] [param_int_i] 
+              , [cexp|[&] { $item:item_return_7 } |] @?= lambdaCapturingByRefAndReturning7
+              , [cexp|[&] { return $exp:exp_7; } |] @?= lambdaCapturingByRefAndReturning7
               ]
 
+    lambdaCapturingByRefAndReturning7 = lambdaByCaptureBody [DefaultByReference] [item_return_7]
+    exp_7 = [cexp|7|]
+    item_return_7 = [citem|return 7;|]
     param_int_i = [cparam|int i|]
     param_double_h = [cparam|double j|]
