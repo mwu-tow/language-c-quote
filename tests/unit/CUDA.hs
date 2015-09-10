@@ -40,6 +40,8 @@ cudaTests = testGroup "CUDA"
               , [cexp|[&] (int i) {}|] @?= lambdaByCaptureParams [DefaultByReference] [param_int_i] 
               , [cexp|[&] { $item:item_return_7 } |] @?= lambdaCapturingByRefAndReturning7
               , [cexp|[&] { return $exp:exp_7; } |] @?= lambdaCapturingByRefAndReturning7
+              , [cexp|[]{}()|] @?= FnCall emptyLambda [] noLoc
+              , [cexp|[](){}()|] @?= FnCall (lambdaByParams []) [] noLoc
               ]
 
     lambdaCapturingByRefAndReturning7 = lambdaByCaptureBody [DefaultByReference] [item_return_7]
