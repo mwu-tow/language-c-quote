@@ -15,7 +15,7 @@
 --
 --  * the return type cannot be explicitly specified;
 --
---  * the package supports C language, not C++, theerefore lambda parameter list and body must be in valid C syntax.
+--  * the package supports C language, not C++, therefore lambda parameter list and body must be in valid C syntax.
 --
 -- Examples of lambdas supported by the 'cexp' quasiquoter:
 --
