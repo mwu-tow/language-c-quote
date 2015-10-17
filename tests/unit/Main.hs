@@ -147,6 +147,8 @@ cQuotationTests = testGroup "C quotations"
     , testCase "initializer antiquote" test_init
     , testCase "initializers antiquote" test_inits
     , testCase "block items antiquote" test_item
+    , testCase "qualifier with type antiquote 1" test_qual_antitype1
+    , testCase "qualifier with type antiquote 2" test_qual_antitype2
     ]
   where
     test_id :: Assertion
@@ -300,6 +302,20 @@ cQuotationTests = testGroup "C quotations"
         item1 = [citem|int y = 2;|]
         item2 = [citem|return x + y;|]
 
+    test_qual_antitype1 :: Assertion
+    test_qual_antitype1 =
+        [cexp|(const $ty:tau) NULL|]
+          @?= [cexp|(const int) NULL|]
+      where
+        tau = [cty|int|]
+
+    test_qual_antitype2 :: Assertion
+    test_qual_antitype2 =
+        [cexp|(const $ty:tau *) NULL|]
+          @?= [cexp|(const int*) NULL|]
+      where
+        tau = [cty|int|]
+
 cPatternAntiquotationTests :: Test
 cPatternAntiquotationTests = testGroup "C pattern antiquotations"
     [ testCase "arguments pattern antiquote" pat_args
@@ -322,6 +338,7 @@ statementCommentTests = testGroup "Statement comments"
     , testCase "antiquote comment" test_antiquote_comment
     , testCase "comment at end of statements quote" test_stms_end_comment
     , testCase "comment before antiquoted statements" test_block_stms_comment
+    , testCase "comment at beginning of a block" test_issue_55
     ]
   where
     test_lbrace_comment :: Assertion
@@ -383,6 +400,20 @@ statementCommentTests = testGroup "Statement comments"
         stm1 = [cstm|a = 1;|]
         stm2 = [cstm|b = 2;|]
         stms = [stm1, stm2]
+
+    test_issue_55 :: Assertion
+    test_issue_55 =
+        [cunit|int f(int x)
+              { // Breaking comment.
+                int y;
+                return x;
+              }|]
+        @?=
+        [cunit|int f(int x)
+              { $comment:("// Breaking comment.")
+                int y;
+                return x;
+              }|]
 
 regressionTests :: Test
 regressionTests = testGroup "Regressions"
@@ -448,7 +479,7 @@ regressionTests = testGroup "Regressions"
           Right grp -> (pretty 80 . ppr) grp @?= "$ty:something c"
       where
         parseDecl :: String -> Either SomeException C.InitGroup
-        parseDecl s = P.parse [C.Antiquotation] [] P.parseDecl (B.pack s) (startPos "<inline>")
+        parseDecl s = P.parse [C.Antiquotation] [] P.parseDecl (B.pack s) (Just (startPos "<inline>"))
 
     issue43 :: Test
     issue43 = testGroup "Issue #43"

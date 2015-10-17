@@ -832,6 +832,13 @@ unary_expression_nlt :
   | 'sizeof' '(' type_name ')'    { SizeofType $3 ($1 `srcspan` $4) }
   | 'sizeof' '(' type_name error  {% unclosed ($2 <--> $3) "(" }
 
+-- This lets us parse expressions like @foo = ...@ where @foo@ is a
+-- typedef. Quite disgusting...
+unary_expression_nlt_or_typedef :: { Exp }
+unary_expression_nlt_or_typedef :
+    unary_expression_nlt { $1 }
+  | NAMED                { Var (Id (getNAMED $1) (srclocOf $1)) (srclocOf $1) }
+
 cast_expression_nlt :: { Exp }
 cast_expression_nlt :
     unary_expression_nlt               { $1 }
@@ -935,27 +942,27 @@ assignment_expression_nlt :: { Exp }
 assignment_expression_nlt :
     conditional_expression_nlt
       { $1 }
-  | unary_expression_nlt '=' assignment_expression
+  | unary_expression_nlt_or_typedef '=' assignment_expression
       { Assign $1 JustAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '*=' assignment_expression
+  | unary_expression_nlt_or_typedef '*=' assignment_expression
       { Assign $1 MulAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '/=' assignment_expression
+  | unary_expression_nlt_or_typedef '/=' assignment_expression
       { Assign $1 DivAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '%=' assignment_expression
+  | unary_expression_nlt_or_typedef '%=' assignment_expression
       { Assign $1 ModAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '+=' assignment_expression
+  | unary_expression_nlt_or_typedef '+=' assignment_expression
       { Assign $1 AddAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '-=' assignment_expression
+  | unary_expression_nlt_or_typedef '-=' assignment_expression
       { Assign $1 SubAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '<<=' assignment_expression
+  | unary_expression_nlt_or_typedef '<<=' assignment_expression
       { Assign $1 LshAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '>>=' assignment_expression
+  | unary_expression_nlt_or_typedef '>>=' assignment_expression
       { Assign $1 RshAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '&=' assignment_expression
+  | unary_expression_nlt_or_typedef '&=' assignment_expression
       { Assign $1 AndAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '^=' assignment_expression
+  | unary_expression_nlt_or_typedef '^=' assignment_expression
       { Assign $1 XorAssign $3 ($1 `srcspan` $3) }
-  | unary_expression_nlt '|=' assignment_expression
+  | unary_expression_nlt_or_typedef '|=' assignment_expression
       { Assign $1 OrAssign $3 ($1 `srcspan` $3) }
 
 expression_nlt :: { Exp }
@@ -1853,12 +1860,26 @@ type_name :
       }
   | ANTI_TYPE
       { AntiType (getANTI_TYPE $1) (srclocOf $1) }
+  | type_qualifier_list ANTI_TYPE
+      { let  {  v     = getANTI_TYPE $2
+             ;  decl  = declRoot (AntiTypeDecl v (srclocOf $2))
+             }
+        in
+          Type (AntiTypeDeclSpec [] $1 v (srclocOf $2)) decl ($1 `srcspan` decl)
+      }
   | ANTI_TYPE abstract_declarator
       { let  {  v     = getANTI_TYPE $1
              ;  decl  = $2 (AntiTypeDecl v (srclocOf $1))
              }
         in
           Type (AntiTypeDeclSpec [] [] v (srclocOf $1)) decl ($1 `srcspan` decl)
+      }
+  | type_qualifier_list ANTI_TYPE abstract_declarator
+      { let  {  v     = getANTI_TYPE $2
+             ;  decl  = $3 (AntiTypeDecl v (srclocOf $2))
+             }
+        in
+          Type (AntiTypeDeclSpec [] $1 v (srclocOf $2)) decl ($1 `srcspan` decl)
       }
 
 abstract_declarator :: { Decl -> Decl }
@@ -1989,8 +2010,7 @@ statement :
   | iteration_statement    { $1 }
   | jump_statement         { $1 }
   | '#pragma'              { Pragma (getPRAGMA $1) (srclocOf $1) }
-  | '//' statement         { mkCommentStm $1 $2 }
-  | ANTI_COMMENT statement { AntiComment (getANTI_COMMENT $1) $2 ($1 `srcspan` $2) }
+  | comment statement      { $1 $2 }
   | ANTI_COMMENT error     {% expected ["statement"] Nothing }
   | ANTI_PRAGMA            { AntiPragma (getANTI_PRAGMA $1) (srclocOf $1) }
   | ANTI_STM               { AntiStm (getANTI_STM $1) (srclocOf $1) }
@@ -2001,16 +2021,16 @@ statement :
   -- Objective-C
   | objc_at_statement    { $1 }
 
-comment :: { Stm }
+comment :: { Stm -> Stm }
 comment :
-     '//'         { mkEmptyCommentStm $1 }
-  |  ANTI_COMMENT { AntiComment (getANTI_COMMENT $1) (Exp Nothing noLoc) (srclocOf $1) }
+     '//'         { mkCommentStm $1 }
+  |  ANTI_COMMENT { \stm -> AntiComment (getANTI_COMMENT $1) stm (srclocOf $1) }
 
 statement_list :: { [Stm] }
 statement_list :
-    comment                 { [$1] }
+    comment                 { [$1 (Exp Nothing noLoc)] }
   | statement_rlist         { rev $1 }
-  | statement_rlist comment { rev (rcons $2 $1) }
+  | statement_rlist comment { rev (rcons ($2 (Exp Nothing noLoc)) $1) }
 
 statement_rlist :: { RevList Stm }
 statement_rlist :
@@ -2019,13 +2039,13 @@ statement_rlist :
   |  ANTI_STMS
        { rsingleton (AntiStms (getANTI_STMS $1) (srclocOf $1)) }
   |  comment ANTI_STMS
-       { AntiStms (getANTI_STMS $2) (srclocOf $2) `rcons` $1 `rcons` rnil }
+       { AntiStms (getANTI_STMS $2) (srclocOf $2) `rcons` $1 (Exp Nothing noLoc) `rcons` rnil }
   |  statement_rlist statement
        { $2 `rcons` $1 }
   |  statement_rlist ANTI_STMS
        { AntiStms (getANTI_STMS $2) (srclocOf $2) `rcons` $1 }
   |  statement_rlist comment ANTI_STMS
-       { AntiStms (getANTI_STMS $3) (srclocOf $3) `rcons` $2 `rcons` $1 }
+       { AntiStms (getANTI_STMS $3) (srclocOf $3) `rcons` $2 (Exp Nothing noLoc) `rcons` $1 }
 
 labeled_statement :: { Stm }
 labeled_statement :
@@ -2053,7 +2073,7 @@ compound_statement:
 block_item_list :: { [BlockItem] }
 block_item_list :
      block_item_rlist         { rev $1 }
-  |  block_item_rlist comment { rev (rcons (BlockStm $2) $1) }
+  |  block_item_rlist comment { rev (rcons (BlockStm ($2 (Exp Nothing noLoc))) $1) }
 
 block_item_rlist :: { RevList BlockItem }
 block_item_rlist :

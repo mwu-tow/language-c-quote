@@ -15,6 +15,8 @@ module Language.C.Quote.Base (
     ToIdent(..),
     ToConst(..),
     ToExp(..),
+    qqExp,
+    qqPat,
     quasiquote
   ) where
 
@@ -660,7 +662,7 @@ parse :: [C.Extensions]
       -> Q a
 parse exts typenames p s = do
     loc <- location
-    case P.parse (C.Antiquotation : exts) typenames p (B.pack s) (locToPos loc) of
+    case P.parse (C.Antiquotation : exts) typenames p (B.pack s) (Just (locToPos loc)) of
       Left err -> fail (show err)
       Right x  -> return x
   where
